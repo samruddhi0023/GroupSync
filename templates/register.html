@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register — GroupSync</title>
+<link rel="stylesheet" href="/static/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+</head>
+<body class="auth-body">
+<div class="auth-container">
+  <div class="auth-panel">
+    <a href="/" class="auth-brand">Group<span>Sync</span></a>
+    <h2 class="auth-title">Create account</h2>
+    <p class="auth-sub">Join GroupSync and start planning smarter trips</p>
+
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/register" class="auth-form">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" placeholder="travel_buddy" required autofocus>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" name="email" placeholder="you@example.com" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="••••••••" required minlength="6">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+    </form>
+
+    <p class="auth-switch">Already have an account? <a href="/login">Sign in</a></p>
+  </div>
+  <div class="auth-art">
+    <div class="art-text">Your next adventure starts here</div>
+    <div class="art-destinations">
+      <span>🌊 Goa</span><span>❄️ Manali</span><span>🏰 Jaipur</span>
+      <span>🌿 Kerala</span><span>⛵ Andaman</span><span>🏜️ Jaisalmer</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

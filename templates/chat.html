@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ group.name }} — GroupSync</title>
+<link rel="stylesheet" href="/static/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+</head>
+<body class="chat-body">
+
+<div class="chat-layout">
+  <!-- LEFT: Members Panel -->
+  <aside class="members-panel">
+    <a href="/dashboard" class="back-link">← Dashboard</a>
+    <div class="brand-small">Group<span>Sync</span></div>
+    <div class="group-name-label">{{ group.name }}</div>
+
+    <div class="members-list">
+      <div class="members-heading">Members ({{ members|length }})</div>
+      {% for m in members %}
+      <div class="member-item {% if m.user.username == user.username %}member-me{% endif %}">
+        <div class="member-avatar">{{ m.user.username[0].upper() }}</div>
+        <div class="member-info">
+          <span class="member-name">{{ m.user.username }}</span>
+          {% if m.is_admin %}<span class="member-badge">admin</span>{% endif %}
+          {% if m.user.username == user.username %}<span class="member-badge you-badge">you</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="invite-section">
+      <div class="invite-label">Invite Link</div>
+      <button class="invite-btn" onclick="copyInvite('{{ request.base_url }}api/groups/join-invite/{{ group.invite_code }}')">
+        📋 Copy Invite Link
+      </button>
+    </div>
+  </aside>
+
+  <!-- CENTER: Chat Area -->
+  <main class="chat-main">
+    <div class="chat-header">
+      <h2>{{ group.name }}</h2>
+      <span class="chat-tip">💡 Discuss your trip preferences — the AI is listening!</span>
+    </div>
+
+    <div class="messages-area" id="messagesArea">
+      {% for msg in messages %}
+      <div class="message-wrap {% if msg.sender.username == user.username %}msg-mine{% else %}msg-other{% endif %}">
+        <div class="msg-avatar">{{ msg.sender.username[0].upper() }}</div>
+        <div class="msg-bubble-wrap">
+          <div class="msg-sender">{{ msg.sender.username }}{% if msg.sender.username == user.username %} <span class="you-label">(you)</span>{% endif %}</div>
+          <div class="msg-bubble">{{ msg.content }}</div>
+          <div class="msg-time">{{ msg.created_at.strftime('%H:%M') }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="chat-input-area">
+      <input type="text" id="msgInput" class="msg-input" placeholder="Share your travel preferences, budget, vibe..." autocomplete="off">
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </main>
+
+  <!-- RIGHT: AI Recommendations Panel -->
+  <aside class="ai-panel">
+    <div class="ai-header">
+      <div class="ai-title">
+        <span class="ai-dot"></span>
+        AI Trip Advisor
+      </div>
+      <button class="suggest-btn" id="suggestBtn" onclick="getRecommendations()">
+        ✦ Suggest Destinations
+      </button>
+    </div>
+
+    <div id="aiContent" class="ai-content">
+      <div class="ai-empty">
+        <div class="ai-empty-icon">🗺️</div>
+        <p>Chat with your group about travel preferences, budget, and vibes — then click <strong>Suggest Destinations</strong>!</p>
+        <div class="ai-hints">
+          <div class="hint-chip">💰 "budget 3000/day"</div>
+          <div class="hint-chip">🏖️ "I love beaches"</div>
+          <div class="hint-chip">🏔️ "adventure trekking"</div>
+          <div class="hint-chip">🌆 "starting from Mumbai"</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+const GROUP_ID = {{ group.id }};
+const MY_USERNAME = "{{ user.username }}";
+let lastMessageId = {% if messages %}{{ messages[-1].id }}{% else %}0{% endif %};
+
+function sendMessage() {
+  const input = document.getElementById('msgInput');
+  const content = input.value.trim();
+  if (!content) return;
+  input.value = '';
+  input.disabled = true;
+
+  fetch('/api/messages/send', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({group_id: GROUP_ID, content})
+  })
+  .then(r => r.json())
+  .then(msg => {
+    appendMessage(msg.content, MY_USERNAME, msg.created_at, true, msg.id);
+    lastMessageId = msg.id;
+    input.disabled = false;
+    input.focus();
+  })
+  .catch(() => { input.disabled = false; });
+}
+
+document.getElementById('msgInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+function appendMessage(content, sender, time, isMe, id) {
+  const area = document.getElementById('messagesArea');
+  const wrap = document.createElement('div');
+  wrap.className = `message-wrap ${isMe ? 'msg-mine' : 'msg-other'}`;
+  wrap.dataset.id = id;
+  const senderLabel = isMe ? `${sender} <span class="you-label">(you)</span>` : sender;
+  wrap.innerHTML = `
+    <div class="msg-avatar">${sender[0].toUpperCase()}</div>
+    <div class="msg-bubble-wrap">
+      <div class="msg-sender">${senderLabel}</div>
+      <div class="msg-bubble">${escapeHtml(content)}</div>
+      <div class="msg-time">${time}</div>
+    </div>
+  `;
+  area.appendChild(wrap);
+  area.scrollTop = area.scrollHeight;
+}
+
+function escapeHtml(text) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(text));
+  return d.innerHTML;
+}
+
+function pollMessages() {
+  fetch(`/api/messages/${GROUP_ID}?since_id=${lastMessageId}`)
+  .then(r => r.json())
+  .then(msgs => {
+    msgs.forEach(m => {
+      if (!m.is_me) {
+        appendMessage(m.content, m.sender, m.created_at, false, m.id);
+        lastMessageId = Math.max(lastMessageId, m.id);
+      }
+    });
+  });
+}
+setInterval(pollMessages, 3000);
+
+// Scroll to bottom on load
+window.onload = () => {
+  const area = document.getElementById('messagesArea');
+  area.scrollTop = area.scrollHeight;
+};
+
+function copyInvite(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.querySelector('.invite-btn');
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy Invite Link', 2000);
+  });
+}
+
+function getRecommendations() {
+  const btn = document.getElementById('suggestBtn');
+  btn.textContent = '⏳ Analyzing...';
+  btn.disabled = true;
+
+  fetch(`/api/recommend/${GROUP_ID}`, {method: 'POST'})
+  .then(r => r.json())
+  .then(data => {
+    btn.textContent = '✦ Suggest Destinations';
+    btn.disabled = false;
+    renderRecommendations(data);
+  })
+  .catch(err => {
+    btn.textContent = '✦ Suggest Destinations';
+    btn.disabled = false;
+    document.getElementById('aiContent').innerHTML = `
+      <div class="ai-error">⚠️ ${err.message || 'Could not generate recommendations. Try sending more messages first.'}</div>
+    `;
+  });
+}
+
+function renderRecommendations(data) {
+  const {analysis, recommendations} = data;
+  const vibeEmojis = {beach:'🏖️',adventure:'🏔️',nature:'🌿',culture:'🏛️',nightlife:'🌙',relaxation:'😌',food:'🍜',spiritual:'🕌',snow:'❄️',desert:'🏜️',photography:'📷',family:'👨‍👩‍👧',scenic:'🌅',trekking:'🥾',history:'🏰',romance:'💑'};
+
+  let html = `
+    <div class="analysis-summary">
+      <div class="analysis-title">Chat Analysis</div>
+      <div class="analysis-pills">
+        <span class="pill pill-blue">💰 ₹${analysis.budget.toLocaleString()}/day</span>
+        ${analysis.top_vibes.slice(0,4).map(v => `<span class="pill pill-teal">${vibeEmojis[v]||'✦'} ${v}</span>`).join('')}
+        ${analysis.starting_city !== 'Unknown' ? `<span class="pill pill-orange">📍 ${analysis.starting_city}</span>` : ''}
+      </div>
+    </div>
+    <div class="recs-title">Top Destination Cities</div>
+  `;
+
+  const medals = ['🥇','🥈','🥉'];
+
+  recommendations.forEach((city, i) => {
+    const coverPct = city.coverage_pct;
+    const coverColor = coverPct >= 70 ? '#22c55e' : coverPct >= 40 ? '#f59e0b' : '#ef4444';
+
+    // Places accordion
+    let placesHtml = '';
+    city.places.forEach((p, pi) => {
+      const satColor = p.group_satisfaction_pct >= 70 ? '#22c55e' : p.group_satisfaction_pct >= 40 ? '#f59e0b' : '#ef4444';
+      placesHtml += `
+        <div class="place-card ${pi === 0 ? 'place-card-best' : ''}">
+          <div class="place-card-header">
+            <div>
+              <span class="place-name">${p.place}</span>
+              ${pi === 0 ? '<span class="best-tag">Best Match</span>' : ''}
+            </div>
+            <span class="place-rating">⭐ ${p.rating}</span>
+          </div>
+          <div class="place-vibes-row">
+            ${p.vibes_covered.map(v => `<span class="vibe-tag vibe-covered">${vibeEmojis[v]||'✦'} ${v}</span>`).join('')}
+          </div>
+          <div class="place-meta-row">
+            <span class="place-cost">₹${p.cost_per_day.toLocaleString()}/day</span>
+            <span class="place-sat" style="color:${satColor}">${p.group_satisfaction_pct}% match</span>
+            <span class="place-stay">${p.ideal_stay}d stay</span>
+            <span class="budget-dot ${p.budget_fit.startsWith('Within') ? 'dot-green' : 'dot-red'}">${p.budget_fit.startsWith('Within') ? '✓ budget' : p.budget_fit}</span>
+          </div>
+          <div class="place-activities">${p.activities.slice(0,4).map(a => `<span class="act-chip">${a}</span>`).join('')}</div>
+          <div class="place-why">${p.why_recommended}</div>
+          <div class="place-food">🍽️ <strong>${p.famous_food}</strong> · 🗓️ ${p.best_season}</div>
+        </div>
+      `;
+    });
+
+    html += `
+      <div class="city-card" style="animation-delay:${i*0.12}s">
+        <div class="city-card-header">
+          <div class="city-left">
+            <div class="city-rank">${medals[i]} Recommendation #${i+1}</div>
+            <div class="city-name">📍 ${city.city}, ${city.state}</div>
+          </div>
+          <div class="city-right">
+            <div class="city-coverage" style="color:${coverColor}">${coverPct}%</div>
+            <div class="city-coverage-label">vibe coverage</div>
+          </div>
+        </div>
+
+        <div class="city-vibe-bar">
+          <div class="vibe-bar-label">Vibes covered by this city:</div>
+          <div class="vibe-bar-chips">
+            ${city.covered_vibes.map(v => `<span class="vibe-tag vibe-covered">${vibeEmojis[v]||'✦'} ${v}</span>`).join('')}
+            ${city.missing_vibes.map(v => `<span class="vibe-tag vibe-missing">✗ ${v}</span>`).join('')}
+          </div>
+        </div>
+
+        <div class="city-summary-row">
+          <span class="pill pill-blue">₹${city.avg_cost_per_day.toLocaleString()} avg/day</span>
+          <span class="pill ${city.budget_fit.startsWith('Within') ? 'pill-green' : 'pill-red'}">${city.budget_fit}</span>
+          <span class="pill pill-teal">⭐ up to ${city.best_rating}</span>
+        </div>
+
+        <div class="places-label">Places to visit in ${city.city}:</div>
+        <div class="places-list">${placesHtml}</div>
+      </div>
+    `;
+  });
+
+  document.getElementById('aiContent').innerHTML = html;
+}
+</script>
+</body>
+</html>

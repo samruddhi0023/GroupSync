@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — GroupSync</title>
+<link rel="stylesheet" href="/static/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+</head>
+<body class="dash-body">
+<nav class="nav nav-dash">
+  <a href="/" class="nav-brand">Group<span>Sync</span></a>
+  <div class="nav-user">
+    <span class="nav-username">👤 {{ user.username }}</span>
+    <a href="/logout" class="btn btn-ghost btn-sm">Logout</a>
+  </div>
+</nav>
+
+<main class="dash-main">
+  <div class="dash-header">
+    <h1>Your Trips</h1>
+    <p>Manage your travel groups or start a new adventure</p>
+  </div>
+
+  <div class="dash-actions">
+    <button class="action-card" onclick="openModal('createModal')">
+      <div class="action-icon">✦</div>
+      <h3>Create Group</h3>
+      <p>Start a new trip planning group</p>
+    </button>
+    <button class="action-card" onclick="openModal('joinModal')">
+      <div class="action-icon">→</div>
+      <h3>Join Group</h3>
+      <p>Join an existing group with a password</p>
+    </button>
+  </div>
+
+  {% if groups %}
+  <div class="groups-section">
+    <h2 class="section-title">Your Groups</h2>
+    <div class="groups-grid">
+      {% for group in groups %}
+      <a href="/chat/{{ group.id }}" class="group-card">
+        <div class="group-card-icon">✈️</div>
+        <div class="group-card-info">
+          <h3>{{ group.name }}</h3>
+          <p>Click to open group chat</p>
+        </div>
+        <div class="group-card-arrow">→</div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">🗺️</div>
+    <h3>No groups yet</h3>
+    <p>Create or join a group to start planning your trip!</p>
+  </div>
+  {% endif %}
+</main>
+
+<!-- Create Group Modal -->
+<div id="createModal" class="modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('createModal')">✕</button>
+    <h2>Create New Group</h2>
+    <p>Share the group name and password with your travel crew</p>
+    <form method="POST" action="/api/groups/create">
+      <div class="form-group">
+        <label>Group Name</label>
+        <input type="text" name="name" placeholder="e.g. Goa Squad 2025" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Share with your crew" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Create Group</button>
+    </form>
+  </div>
+</div>
+
+<!-- Join Group Modal -->
+<div id="joinModal" class="modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('joinModal')">✕</button>
+    <h2>Join a Group</h2>
+    <p>Enter the group name and password provided by the organizer</p>
+    <form method="POST" action="/api/groups/join">
+      <div class="form-group">
+        <label>Group Name</label>
+        <input type="text" name="name" placeholder="Group name" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Group password" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Join Group</button>
+    </form>
+  </div>
+</div>
+
+<script>
+function openModal(id) {
+  document.getElementById(id).classList.add('active');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+document.querySelectorAll('.modal').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GroupSync — AI Group Trip Planner</title>
+<link rel="stylesheet" href="/static/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+</head>
+<body class="home-body">
+<nav class="nav">
+  <div class="nav-brand">Group<span>Sync</span></div>
+  <div class="nav-links">
+    {% if user %}
+      <a href="/dashboard" class="btn btn-ghost">Dashboard</a>
+      <a href="/logout" class="btn btn-ghost">Logout</a>
+    {% else %}
+      <a href="/login" class="btn btn-ghost">Login</a>
+      <a href="/register" class="btn btn-primary">Get Started</a>
+    {% endif %}
+  </div>
+</nav>
+
+<main class="hero">
+  <div class="hero-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+  <div class="hero-content">
+    <div class="hero-badge">✦ AI-Powered Travel Planning</div>
+    <h1 class="hero-title">Plan trips your<br><em>whole group</em> will love</h1>
+    <p class="hero-sub">GroupSync listens to your group chat and intelligently recommends destinations that maximize everyone's satisfaction — balancing vibes, budget, and fairness.</p>
+    <div class="hero-actions">
+      <a href="/register" class="btn btn-hero">Start Planning Free</a>
+      <a href="/login" class="btn btn-outline-hero">Sign In</a>
+    </div>
+  </div>
+  <div class="hero-cards">
+    <div class="float-card fc-1">
+      <div class="fc-icon">🏖️</div>
+      <div class="fc-text">Goa Beach</div>
+      <div class="fc-match">96% match</div>
+    </div>
+    <div class="float-card fc-2">
+      <div class="fc-icon">🏔️</div>
+      <div class="fc-text">Manali Peaks</div>
+      <div class="fc-match">88% match</div>
+    </div>
+    <div class="float-card fc-3">
+      <div class="fc-icon">🏯</div>
+      <div class="fc-text">Jaipur Fort</div>
+      <div class="fc-match">82% match</div>
+    </div>
+  </div>
+</main>
+
+<section class="features">
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">💬</div>
+      <h3>Group Chat</h3>
+      <p>Chat with your travel crew in real-time. Share preferences, budgets, and travel dreams.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <h3>AI Analysis</h3>
+      <p>Our NLP engine reads the conversation and extracts everyone's hidden preferences.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚖️</div>
+      <h3>Fair for Everyone</h3>
+      <p>Recommendations scored on individual satisfaction AND group fairness index.</p>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

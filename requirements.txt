@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+sqlalchemy
+pandas
+python-jose[cryptography]
+passlib[bcrypt]
+jinja2
+python-multipart
+google-generativeai
+numpy
+scikit-learn
