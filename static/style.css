@@ -255,7 +255,7 @@ a:hover { opacity: 0.85; }
 
 /* ========= CHAT PAGE ========= */
 .chat-body { height: 100vh; overflow: hidden; }
-.chat-layout { display: grid; grid-template-columns: 220px 1fr 300px; height: 100vh; }
+.chat-layout { display: grid; grid-template-columns: 220px 1fr 375px; height: 100vh; }
 
 /* Members panel */
 .members-panel {
@@ -482,3 +482,42 @@ a:hover { opacity: 0.85; }
   .nav { padding: 1rem 1.5rem; }
   .dash-actions { grid-template-columns: 1fr; }
 }
+
+/* ========= FEEDBACK BUTTON & MODAL ========= */
+.feedback-btn {
+  background: var(--bg-2); border: 1px solid var(--border);
+  color: var(--text-2); padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm); cursor: pointer;
+  font-family: inherit; font-size: 0.8rem; font-weight: 500;
+  transition: all 0.2s; width: 100%;
+}
+.feedback-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+.fb-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.fb-label { font-size: 0.8rem; color: var(--text-2); font-weight: 500; }
+.fb-input {
+  background: var(--bg-2); border: 1.5px solid var(--border);
+  color: var(--text-1); padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm); font-family: inherit; font-size: 0.875rem;
+}
+.fb-input:focus { outline: none; border-color: var(--amber); }
+.fb-textarea {
+  background: var(--bg-2); border: 1.5px solid var(--border);
+  color: var(--text-1); padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm); font-family: inherit; font-size: 0.875rem;
+  resize: vertical;
+}
+.fb-textarea:focus { outline: none; border-color: var(--amber); }
+.fb-stars span {
+  font-size: 1.4rem; cursor: pointer; transition: transform 0.1s; display: inline-block;
+}
+.fb-stars span:hover { transform: scale(1.2); }
+.fb-choice {
+  flex: 1; padding: 0.45rem 0.5rem; border-radius: var(--radius-sm);
+  background: var(--bg-2); border: 1px solid var(--border);
+  color: var(--text-2); cursor: pointer; font-size: 0.8rem;
+  transition: all 0.15s; font-family: inherit;
+}
+.fb-choice:hover { border-color: var(--amber); }
+.fb-choice-active { background: var(--amber-glow) !important; border-color: var(--amber) !important; color: var(--amber) !important; }
+.pill-red { background: rgba(245,101,101,0.12); color: #f87171; border: 1px solid rgba(245,101,101,0.25); }

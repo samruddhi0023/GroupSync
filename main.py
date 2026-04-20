@@ -323,10 +323,47 @@ def recommend(group_id: int, request: Request, db: Session = Depends(get_db)):
 
     return {
         "analysis": {
-            "budget": analysis["budget"],
-            "top_vibes": analysis["top_vibes"],
-            "starting_city": analysis["starting_city"],
-            "total_users": analysis["total_users"],
+            "budget":           analysis["budget"],
+            "top_vibes":        analysis["top_vibes"],
+            "starting_city":    analysis["starting_city"],
+            "total_users":      analysis["total_users"],
+            "preferred_states": analysis.get("preferred_states", []),
+            "excluded_vibes":   analysis.get("excluded_vibes", []),
         },
         "recommendations": recommendations.get("city_clusters", [])
     }
+
+@app.post("/api/feedback/{group_id}")
+async def submit_feedback(group_id: int, request: Request, db: Session = Depends(get_db)):
+    import csv, os
+    from datetime import datetime
+
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    body = await request.json()
+
+    feedback_row = {
+        "timestamp":              datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+        "group_id":               group_id,
+        "username":               user.username,
+        "recommended_city":       body.get("recommended_city", ""),
+        "destination_relevance":  body.get("destination_relevance", ""),
+        "budget_accuracy":        body.get("budget_accuracy", ""),
+        "vibe_match":             body.get("vibe_match", ""),
+        "overall_satisfaction":   body.get("overall_satisfaction", ""),
+        "would_use_again":        body.get("would_use_again", ""),
+        "comments":               body.get("comments", "").strip(),
+    }
+
+    feedback_path = os.path.join(os.path.dirname(__file__), "data", "feedback.csv")
+    file_exists   = os.path.exists(feedback_path)
+
+    with open(feedback_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=feedback_row.keys())
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(feedback_row)
+
+    return {"status": "saved", "message": "Thank you for your feedback!"}

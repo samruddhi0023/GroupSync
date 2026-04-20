@@ -79,6 +79,9 @@
       <button class="suggest-btn" id="suggestBtn" onclick="getRecommendations()">
         ✦ Suggest Destinations
       </button>
+      <button class="feedback-btn" id="feedbackBtn" onclick="openFeedback()" style="display:none">
+        💬 Feedback
+      </button>
     </div>
 
     <div id="aiContent" class="ai-content">
@@ -96,10 +99,137 @@
   </aside>
 </div>
 
+<!-- Feedback Modal -->
+<div id="feedbackModal" class="modal">
+  <div class="modal-box" style="max-width:500px">
+    <button class="modal-close" onclick="closeFeedback()">✕</button>
+    <h2>Rate Your Experience</h2>
+    <p>Help us improve GroupSync — your feedback takes 30 seconds.</p>
+
+    <div class="feedback-form" style="display:flex;flex-direction:column;gap:1rem;margin-top:1rem">
+
+      <div class="fb-group">
+        <div class="fb-label">Which city was recommended to you?</div>
+        <input type="text" id="fb_city" class="fb-input" placeholder="e.g. Goa, Lonavala">
+      </div>
+
+      <div class="fb-group">
+        <div class="fb-label">How relevant was the destination? ⭐</div>
+        <div class="fb-stars" id="stars_destination">
+          <span onclick="setStar('destination',1)">☆</span><span onclick="setStar('destination',2)">☆</span>
+          <span onclick="setStar('destination',3)">☆</span><span onclick="setStar('destination',4)">☆</span>
+          <span onclick="setStar('destination',5)">☆</span>
+        </div>
+      </div>
+
+      <div class="fb-group">
+        <div class="fb-label">How accurate was the budget estimate? ⭐</div>
+        <div class="fb-stars" id="stars_budget">
+          <span onclick="setStar('budget',1)">☆</span><span onclick="setStar('budget',2)">☆</span>
+          <span onclick="setStar('budget',3)">☆</span><span onclick="setStar('budget',4)">☆</span>
+          <span onclick="setStar('budget',5)">☆</span>
+        </div>
+      </div>
+
+      <div class="fb-group">
+        <div class="fb-label">How well did vibes match your preferences? ⭐</div>
+        <div class="fb-stars" id="stars_vibe">
+          <span onclick="setStar('vibe',1)">☆</span><span onclick="setStar('vibe',2)">☆</span>
+          <span onclick="setStar('vibe',3)">☆</span><span onclick="setStar('vibe',4)">☆</span>
+          <span onclick="setStar('vibe',5)">☆</span>
+        </div>
+      </div>
+
+      <div class="fb-group">
+        <div class="fb-label">Overall satisfaction ⭐</div>
+        <div class="fb-stars" id="stars_overall">
+          <span onclick="setStar('overall',1)">☆</span><span onclick="setStar('overall',2)">☆</span>
+          <span onclick="setStar('overall',3)">☆</span><span onclick="setStar('overall',4)">☆</span>
+          <span onclick="setStar('overall',5)">☆</span>
+        </div>
+      </div>
+
+      <div class="fb-group">
+        <div class="fb-label">Would you use GroupSync again?</div>
+        <div style="display:flex;gap:.5rem">
+          <button class="fb-choice" id="fb_yes" onclick="setChoice('yes')">👍 Yes</button>
+          <button class="fb-choice" id="fb_no"  onclick="setChoice('no')">👎 No</button>
+          <button class="fb-choice" id="fb_maybe" onclick="setChoice('maybe')">🤔 Maybe</button>
+        </div>
+      </div>
+
+      <div class="fb-group">
+        <div class="fb-label">Any suggestions or comments? (optional)</div>
+        <textarea id="fb_comments" class="fb-textarea" rows="3" placeholder="Tell us what could be better..."></textarea>
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="submitFeedback()">Submit Feedback</button>
+      <div id="fb_success" style="display:none;text-align:center;color:var(--green);font-size:.9rem;padding:.5rem">
+        ✓ Feedback saved — thank you!
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const GROUP_ID = {{ group.id }};
 const MY_USERNAME = "{{ user.username }}";
 let lastMessageId = {% if messages %}{{ messages[-1].id }}{% else %}0{% endif %};
+
+// Feedback state
+const fbRatings = { destination: 0, budget: 0, vibe: 0, overall: 0 };
+let fbChoice = '';
+
+function setStar(field, val) {
+  fbRatings[field] = val;
+  const container = document.getElementById('stars_' + field);
+  container.querySelectorAll('span').forEach((s, i) => {
+    s.textContent = i < val ? '★' : '☆';
+    s.style.color = i < val ? 'var(--amber)' : '';
+  });
+}
+
+function setChoice(val) {
+  fbChoice = val;
+  ['yes','no','maybe'].forEach(k => {
+    document.getElementById('fb_' + k).classList.toggle('fb-choice-active', k === val);
+  });
+}
+
+function openFeedback() {
+  document.getElementById('feedbackModal').classList.add('active');
+}
+function closeFeedback() {
+  document.getElementById('feedbackModal').classList.remove('active');
+  document.getElementById('fb_success').style.display = 'none';
+}
+
+function submitFeedback() {
+  const payload = {
+    recommended_city:      document.getElementById('fb_city').value.trim(),
+    destination_relevance: fbRatings.destination,
+    budget_accuracy:       fbRatings.budget,
+    vibe_match:            fbRatings.vibe,
+    overall_satisfaction:  fbRatings.overall,
+    would_use_again:       fbChoice,
+    comments:              document.getElementById('fb_comments').value.trim(),
+  };
+
+  fetch(`/api/feedback/${GROUP_ID}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(() => {
+    document.getElementById('fb_success').style.display = 'block';
+    setTimeout(closeFeedback, 2000);
+  })
+  .catch(() => {
+    document.getElementById('fb_success').textContent = '⚠️ Could not save. Try again.';
+    document.getElementById('fb_success').style.display = 'block';
+  });
+}
 
 function sendMessage() {
   const input = document.getElementById('msgInput');
@@ -165,7 +295,6 @@ function pollMessages() {
 }
 setInterval(pollMessages, 3000);
 
-// Scroll to bottom on load
 window.onload = () => {
   const area = document.getElementById('messagesArea');
   area.scrollTop = area.scrollHeight;
@@ -189,6 +318,7 @@ function getRecommendations() {
   .then(data => {
     btn.textContent = '✦ Suggest Destinations';
     btn.disabled = false;
+    document.getElementById('feedbackBtn').style.display = 'block';
     renderRecommendations(data);
   })
   .catch(err => {
@@ -202,27 +332,46 @@ function getRecommendations() {
 
 function renderRecommendations(data) {
   const {analysis, recommendations} = data;
-  const vibeEmojis = {beach:'🏖️',adventure:'🏔️',nature:'🌿',culture:'🏛️',nightlife:'🌙',relaxation:'😌',food:'🍜',spiritual:'🕌',snow:'❄️',desert:'🏜️',photography:'📷',family:'👨‍👩‍👧',scenic:'🌅',trekking:'🥾',history:'🏰',romance:'💑'};
+  const vibeEmojis = {beach:'🏖️',adventure:'🏔️',nature:'🌿',culture:'🏛️',nightlife:'🌙',
+    relaxation:'😌',food:'🍜',spiritual:'🕌',snow:'❄️',desert:'🏜️',photography:'📷',
+    family:'👨‍👩‍👧',scenic:'🌅',trekking:'🥾',history:'🏰',romance:'💑',
+    waterpark:'🌊','water sports':'🤿'};
+
+  const excludedPills = (analysis.excluded_vibes || [])
+    .map(v => `<span class="pill pill-red">✗ ${v}</span>`).join('');
+
+  const statePills = (analysis.preferred_states || [])
+    .map(s => `<span class="pill pill-orange">📍 ${s}</span>`).join('');
 
   let html = `
     <div class="analysis-summary">
-      <div class="analysis-title">Chat Analysis</div>
+      <div class="analysis-title">Chat Analysis — Latest Read</div>
       <div class="analysis-pills">
         <span class="pill pill-blue">💰 ₹${analysis.budget.toLocaleString()}/day</span>
         ${analysis.top_vibes.slice(0,4).map(v => `<span class="pill pill-teal">${vibeEmojis[v]||'✦'} ${v}</span>`).join('')}
         ${analysis.starting_city !== 'Unknown' ? `<span class="pill pill-orange">📍 ${analysis.starting_city}</span>` : ''}
+        ${statePills}
+        ${excludedPills}
       </div>
     </div>
     <div class="recs-title">Top Destination Cities</div>
   `;
 
+  if (!recommendations || recommendations.length === 0) {
+    html += `<div class="ai-error" style="margin-top:1rem">
+      ⚠️ No destinations found matching all your filters.<br>
+      <small>Try relaxing your requirements or adding more details in chat.</small>
+    </div>`;
+    document.getElementById('aiContent').innerHTML = html;
+    return;
+  }
+
   const medals = ['🥇','🥈','🥉'];
 
   recommendations.forEach((city, i) => {
-    const coverPct = city.coverage_pct;
+    const coverPct   = city.coverage_pct;
     const coverColor = coverPct >= 70 ? '#22c55e' : coverPct >= 40 ? '#f59e0b' : '#ef4444';
 
-    // Places accordion
     let placesHtml = '';
     city.places.forEach((p, pi) => {
       const satColor = p.group_satisfaction_pct >= 70 ? '#22c55e' : p.group_satisfaction_pct >= 40 ? '#f59e0b' : '#ef4444';
@@ -263,7 +412,6 @@ function renderRecommendations(data) {
             <div class="city-coverage-label">vibe coverage</div>
           </div>
         </div>
-
         <div class="city-vibe-bar">
           <div class="vibe-bar-label">Vibes covered by this city:</div>
           <div class="vibe-bar-chips">
@@ -271,13 +419,11 @@ function renderRecommendations(data) {
             ${city.missing_vibes.map(v => `<span class="vibe-tag vibe-missing">✗ ${v}</span>`).join('')}
           </div>
         </div>
-
         <div class="city-summary-row">
           <span class="pill pill-blue">₹${city.avg_cost_per_day.toLocaleString()} avg/day</span>
           <span class="pill ${city.budget_fit.startsWith('Within') ? 'pill-green' : 'pill-red'}">${city.budget_fit}</span>
           <span class="pill pill-teal">⭐ up to ${city.best_rating}</span>
         </div>
-
         <div class="places-label">Places to visit in ${city.city}:</div>
         <div class="places-list">${placesHtml}</div>
       </div>
