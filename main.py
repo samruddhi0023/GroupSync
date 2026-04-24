@@ -71,17 +71,22 @@ def require_user(request: Request, db: Session = Depends(get_db)):
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
-    return templates.TemplateResponse("home.html", {"request": request, "user": user})
+    return templates.TemplateResponse(request, "home.html", {"user": user})
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request, "login.html", {"error": None})
 
 @app.post("/login", response_class=HTMLResponse)
-def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
     user = db.query(models.User).filter(models.User.username == username).first()
     if not user or not verify_password(password, user.hashed_password):
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"})
+        return templates.TemplateResponse(request, "login.html", {"error": "Invalid credentials"})
     token = create_access_token({"sub": user.username})
     pending_invite = request.cookies.get("pending_invite")
     redirect_url = "/dashboard"
@@ -104,7 +109,7 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
 
 @app.get("/register", response_class=HTMLResponse)
 def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request, "register.html", {"error": None})
 
 @app.post("/register", response_class=HTMLResponse)
 def register(
@@ -118,7 +123,10 @@ def register(
         (models.User.username == username) | (models.User.email == email)
     ).first()
     if existing:
-        return templates.TemplateResponse("register.html", {"request": request, "error": "Username or email already taken"})
+        return templates.TemplateResponse(
+            request, "register.html",
+            {"error": "Username or email already taken"}
+        )
     user = models.User(
         username=username,
         email=email,
@@ -153,9 +161,11 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
-    memberships = db.query(models.GroupMember).filter(models.GroupMember.user_id == user.id).all()
+    memberships = db.query(models.GroupMember).filter(
+        models.GroupMember.user_id == user.id
+    ).all()
     groups = [m.group for m in memberships]
-    return templates.TemplateResponse("dashboard.html", {"request": request, "user": user, "groups": groups})
+    return templates.TemplateResponse(request, "dashboard.html", {"user": user, "groups": groups})
 
 @app.get("/chat/{group_id}", response_class=HTMLResponse)
 def chat_page(group_id: int, request: Request, db: Session = Depends(get_db)):
@@ -171,22 +181,28 @@ def chat_page(group_id: int, request: Request, db: Session = Depends(get_db)):
     ).first()
     if not member:
         raise HTTPException(status_code=403, detail="Not a member")
-    members = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id).all()
+    members = db.query(models.GroupMember).filter(
+        models.GroupMember.group_id == group_id
+    ).all()
     messages = db.query(models.Message).filter(
         models.Message.group_id == group_id
     ).order_by(models.Message.created_at).all()
-    return templates.TemplateResponse("chat.html", {
-        "request": request,
-        "user": user,
-        "group": group,
-        "members": members,
-        "messages": messages
+    return templates.TemplateResponse(request, "chat.html", {
+        "user":     user,
+        "group":    group,
+        "members":  members,
+        "messages": messages,
     })
 
 # --- API Endpoints ---
 
 @app.post("/api/groups/create")
-def create_group(request: Request, name: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+def create_group(
+    request: Request,
+    name: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
     user = get_current_user_from_cookie(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -209,7 +225,12 @@ def create_group(request: Request, name: str = Form(...), password: str = Form(.
     return RedirectResponse(url=f"/chat/{group.id}", status_code=302)
 
 @app.post("/api/groups/join")
-def join_group(request: Request, name: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+def join_group(
+    request: Request,
+    name: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
     user = get_current_user_from_cookie(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -254,11 +275,11 @@ async def send_message(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Not authenticated")
     body = await request.json()
     group_id = body.get("group_id")
-    content = body.get("content", "").strip()
+    content  = body.get("content", "").strip()
     if not content:
         raise HTTPException(status_code=400, detail="Empty message")
     member = db.query(models.GroupMember).filter(
-        models.GroupMember.user_id == user.id,
+        models.GroupMember.user_id  == user.id,
         models.GroupMember.group_id == group_id
     ).first()
     if not member:
@@ -268,14 +289,19 @@ async def send_message(request: Request, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(msg)
     return {
-        "id": msg.id,
-        "content": msg.content,
-        "sender": user.username,
-        "created_at": msg.created_at.strftime("%H:%M")
+        "id":         msg.id,
+        "content":    msg.content,
+        "sender":     user.username,
+        "created_at": msg.created_at.strftime("%H:%M"),
     }
 
 @app.get("/api/messages/{group_id}")
-def get_messages(group_id: int, request: Request, since_id: int = 0, db: Session = Depends(get_db)):
+def get_messages(
+    group_id: int,
+    request: Request,
+    since_id: int = 0,
+    db: Session = Depends(get_db)
+):
     user = get_current_user_from_cookie(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -285,11 +311,11 @@ def get_messages(group_id: int, request: Request, since_id: int = 0, db: Session
     ).order_by(models.Message.created_at).all()
     return [
         {
-            "id": m.id,
-            "content": m.content,
-            "sender": m.sender.username,
+            "id":         m.id,
+            "content":    m.content,
+            "sender":     m.sender.username,
             "created_at": m.created_at.strftime("%H:%M"),
-            "is_me": m.user_id == user.id
+            "is_me":      m.user_id == user.id,
         }
         for m in msgs
     ]
@@ -304,7 +330,7 @@ def recommend(group_id: int, request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     member = db.query(models.GroupMember).filter(
-        models.GroupMember.user_id == user.id,
+        models.GroupMember.user_id  == user.id,
         models.GroupMember.group_id == group_id
     ).first()
     if not member:
@@ -318,7 +344,7 @@ def recommend(group_id: int, request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="No messages to analyze")
 
     chat_data = [{"sender": m.sender.username, "content": m.content} for m in messages]
-    analysis = analyze_chat(chat_data)
+    analysis        = analyze_chat(chat_data)
     recommendations = rank_destinations(analysis)
 
     return {
@@ -328,7 +354,7 @@ def recommend(group_id: int, request: Request, db: Session = Depends(get_db)):
             "starting_city":    analysis["starting_city"],
             "total_users":      analysis["total_users"],
             "preferred_states": analysis.get("preferred_states", []),
-            "excluded_vibes":   analysis.get("excluded_vibes", []),
+            "excluded_vibes":   analysis.get("excluded_vibes",   []),
         },
         "recommendations": recommendations.get("city_clusters", [])
     }
@@ -348,16 +374,15 @@ async def submit_feedback(group_id: int, request: Request, db: Session = Depends
         "timestamp":             datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
         "group_id":              group_id,
         "username":              user.username,
-        "recommended_city":      body.get("recommended_city", ""),
+        "recommended_city":      body.get("recommended_city",      ""),
         "destination_relevance": body.get("destination_relevance", ""),
-        "budget_accuracy":       body.get("budget_accuracy", ""),
-        "vibe_match":            body.get("vibe_match", ""),
-        "overall_satisfaction":  body.get("overall_satisfaction", ""),
-        "would_use_again":       body.get("would_use_again", ""),
-        "comments":              body.get("comments", "").strip(),
+        "budget_accuracy":       body.get("budget_accuracy",       ""),
+        "vibe_match":            body.get("vibe_match",            ""),
+        "overall_satisfaction":  body.get("overall_satisfaction",  ""),
+        "would_use_again":       body.get("would_use_again",       ""),
+        "comments":              body.get("comments",              "").strip(),
     }
 
-    # Use BASE_DIR so path works on any server
     feedback_path = os.path.join(BASE_DIR, "data", "feedback.csv")
     os.makedirs(os.path.dirname(feedback_path), exist_ok=True)
     file_exists = os.path.exists(feedback_path)
