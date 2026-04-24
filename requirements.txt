@@ -1,11 +1,10 @@
 fastapi
-uvicorn
+uvicorn[standard]
 sqlalchemy
 pandas
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt
 jinja2
 python-multipart
-google-generativeai
 numpy
-scikit-learn
+aiofiles

@@ -13,12 +13,15 @@ import models
 import bcrypt
 from jose import JWTError, jwt
 
+# ── Absolute base directory (works on any server) ──────────────────────────
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Create tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="GroupSync")
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 # Security
 SECRET_KEY = os.getenv("SECRET_KEY", "groupsync-super-secret-key-2024")
@@ -26,10 +29,8 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 # --- Auth Helpers ---
-# Using bcrypt directly to avoid passlib version compatibility issues
 
 def hash_password(password: str) -> str:
-    # bcrypt has a 72-byte limit, truncate to be safe
     password_bytes = password[:72].encode("utf-8")
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(password_bytes, salt).decode("utf-8")
@@ -82,7 +83,6 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     if not user or not verify_password(password, user.hashed_password):
         return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"})
     token = create_access_token({"sub": user.username})
-    # Check for pending invite
     pending_invite = request.cookies.get("pending_invite")
     redirect_url = "/dashboard"
     if pending_invite:
@@ -128,7 +128,6 @@ def register(
     db.commit()
     db.refresh(user)
     token = create_access_token({"sub": user.username})
-    # Check for pending invite
     pending_invite = request.cookies.get("pending_invite")
     redirect_url = "/dashboard"
     if pending_invite:
@@ -173,7 +172,9 @@ def chat_page(group_id: int, request: Request, db: Session = Depends(get_db)):
     if not member:
         raise HTTPException(status_code=403, detail="Not a member")
     members = db.query(models.GroupMember).filter(models.GroupMember.group_id == group_id).all()
-    messages = db.query(models.Message).filter(models.Message.group_id == group_id).order_by(models.Message.created_at).all()
+    messages = db.query(models.Message).filter(
+        models.Message.group_id == group_id
+    ).order_by(models.Message.created_at).all()
     return templates.TemplateResponse("chat.html", {
         "request": request,
         "user": user,
@@ -230,7 +231,6 @@ def join_group(request: Request, name: str = Form(...), password: str = Form(...
 def join_via_invite(invite_code: str, request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        # Store invite code in cookie, redirect to register page
         response = RedirectResponse(url=f"/register?invite={invite_code}", status_code=302)
         response.set_cookie("pending_invite", invite_code, max_age=600)
         return response
@@ -335,7 +335,7 @@ def recommend(group_id: int, request: Request, db: Session = Depends(get_db)):
 
 @app.post("/api/feedback/{group_id}")
 async def submit_feedback(group_id: int, request: Request, db: Session = Depends(get_db)):
-    import csv, os
+    import csv
     from datetime import datetime
 
     user = get_current_user_from_cookie(request, db)
@@ -345,20 +345,22 @@ async def submit_feedback(group_id: int, request: Request, db: Session = Depends
     body = await request.json()
 
     feedback_row = {
-        "timestamp":              datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
-        "group_id":               group_id,
-        "username":               user.username,
-        "recommended_city":       body.get("recommended_city", ""),
-        "destination_relevance":  body.get("destination_relevance", ""),
-        "budget_accuracy":        body.get("budget_accuracy", ""),
-        "vibe_match":             body.get("vibe_match", ""),
-        "overall_satisfaction":   body.get("overall_satisfaction", ""),
-        "would_use_again":        body.get("would_use_again", ""),
-        "comments":               body.get("comments", "").strip(),
+        "timestamp":             datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+        "group_id":              group_id,
+        "username":              user.username,
+        "recommended_city":      body.get("recommended_city", ""),
+        "destination_relevance": body.get("destination_relevance", ""),
+        "budget_accuracy":       body.get("budget_accuracy", ""),
+        "vibe_match":            body.get("vibe_match", ""),
+        "overall_satisfaction":  body.get("overall_satisfaction", ""),
+        "would_use_again":       body.get("would_use_again", ""),
+        "comments":              body.get("comments", "").strip(),
     }
 
-    feedback_path = os.path.join(os.path.dirname(__file__), "data", "feedback.csv")
-    file_exists   = os.path.exists(feedback_path)
+    # Use BASE_DIR so path works on any server
+    feedback_path = os.path.join(BASE_DIR, "data", "feedback.csv")
+    os.makedirs(os.path.dirname(feedback_path), exist_ok=True)
+    file_exists = os.path.exists(feedback_path)
 
     with open(feedback_path, "a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=feedback_row.keys())
