@@ -54,7 +54,7 @@ groupsync/
 ├── nlp.py            # NLP: extract budget, vibes, city from chat
 ├── recommender.py    # AI scoring & ranking algorithm
 ├── data/
-│   └── destinations.csv   # 25 Indian travel destinations dataset
+│   └── destinations.csv   # 6000+ Indian travel destinations dataset
 ├── templates/
 │   ├── home.html
 │   ├── login.html
